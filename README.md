@@ -48,4 +48,4 @@ Este proyecto está 100% preparado para ser desplegado en tu VPS con **Coolify**
 1. En tu panel de Coolify, crea un nuevo **Application**.
 2. Selecciona tu repositorio de GitHub (`https://github.com/Franquinro/macros.git`).
 3. Selecciona **Dockerfile** o **Docker Compose** como método de despliegue.
-4. Coolify compilará la imagen en varias etapas y levantará el servidor Nginx en el puerto 80 automáticamente.
+4. Coolify compilará la imagen en varias etapas y levantará el servidor Nginx en el puerto 3000 automáticamente.
