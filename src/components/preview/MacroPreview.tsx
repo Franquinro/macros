@@ -1,0 +1,227 @@
+import React, { useState } from 'react';
+import { MacroData, MacroValidation } from '../../types/macro';
+import { generateMacro } from '../../utils/macroGenerator';
+import { 
+  Copy, 
+  Check, 
+  AlertTriangle, 
+  Sparkles, 
+  Layers, 
+  FileCode, 
+  FileText, 
+  Info,
+  ExternalLink,
+  Code2,
+  Scissors
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+
+interface MacroPreviewProps {
+  macro: MacroData;
+  onOpenImportText: () => void;
+}
+
+export const MacroPreview: React.FC<MacroPreviewProps> = ({
+  macro,
+  onOpenImportText
+}) => {
+  const [includeComments, setIncludeComments] = useState(false);
+  const [copiedMain, setCopiedMain] = useState(false);
+  const [copiedSplitIndex, setCopiedSplitIndex] = useState<number | null>(null);
+
+  const validation: MacroValidation = generateMacro(macro.blocks, includeComments);
+
+  const handleCopy = (text: string, isSplit: boolean = false, splitIdx: number = 0) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+
+    if (isSplit) {
+      setCopiedSplitIndex(splitIdx);
+      setTimeout(() => setCopiedSplitIndex(null), 2000);
+    } else {
+      setCopiedMain(true);
+      setTimeout(() => setCopiedMain(false), 2000);
+    }
+
+    // Trigger celebration confetti
+    try {
+      confetti({
+        particleCount: 40,
+        spread: 60,
+        origin: { y: 0.8 },
+        colors: ['#f3b006', '#38bdf8', '#22c55e', '#a855f7']
+      });
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Color for 255 character gauge
+  const getProgressColor = () => {
+    if (validation.charCount > 255) return 'bg-red-500 shadow-glow-blood';
+    if (validation.charCount > 210) return 'bg-amber-500 shadow-glow-gold';
+    return 'bg-emerald-500 shadow-glow-fel';
+  };
+
+  const percentage = Math.min(100, Math.round((validation.charCount / 255) * 100));
+
+  return (
+    <div className="bg-[#121820] border border-[#232c37] rounded-xl flex flex-col h-full overflow-hidden shadow-xl">
+      
+      {/* Header */}
+      <div className="p-3.5 border-b border-[#232c37] bg-[#161f2b]/70 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <FileCode className="w-4 h-4 text-amber-400" />
+          <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider font-display">
+            Código Generado WoW 3.3.5a
+          </h2>
+        </div>
+
+        <button
+          onClick={onOpenImportText}
+          className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center space-x-1 transition"
+          title="Importar macro existente pegando texto"
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>Importar Texto</span>
+        </button>
+      </div>
+
+      {/* 255 Character Counter Gauge */}
+      <div className="px-4 py-2.5 bg-[#0d121a] border-b border-[#202936]">
+        <div className="flex items-center justify-between text-xs mb-1.5">
+          <span className="text-gray-400 font-medium flex items-center space-x-1">
+            <span>Límite de Caracteres:</span>
+            <span className="font-mono font-bold text-gray-200">
+              {validation.charCount} / 255
+            </span>
+          </span>
+          {validation.isOverLimit ? (
+            <span className="text-red-400 font-bold flex items-center space-x-1 animate-pulse">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>+{validation.charCount - 255} sobre el límite</span>
+            </span>
+          ) : (
+            <span className="text-emerald-400 font-medium">
+              {255 - validation.charCount} restantes
+            </span>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full h-2 bg-[#1b2533] rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-300 ${getProgressColor()}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Code Viewer */}
+      <div className="flex-1 p-3 bg-[#080b0f] flex flex-col justify-between overflow-y-auto">
+        <div className="space-y-2">
+          <div className="relative">
+            <pre className="font-mono text-xs text-gray-200 bg-[#0d1117] p-3 rounded-lg border border-[#232c37] overflow-x-auto min-h-[160px] whitespace-pre-wrap leading-relaxed select-all">
+              {validation.cleanCode || (
+                <span className="text-gray-600 italic">
+                  -- La macro generada aparecerá aquí cuando agregues bloques...
+                </span>
+              )}
+            </pre>
+          </div>
+
+          {/* Warnings & Tips */}
+          {validation.warnings.length > 0 && (
+            <div className="space-y-1">
+              {validation.warnings.map((warn, i) => (
+                <div
+                  key={i}
+                  className="p-2 rounded-lg bg-red-950/30 border border-red-500/30 text-red-300 text-[11px] flex items-start space-x-1.5"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                  <span>{warn}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Split Macros Preview if > 255 chars */}
+          {validation.isOverLimit && validation.splitMacros && validation.splitMacros.length > 1 && (
+            <div className="mt-3 p-3 bg-[#131b26] border border-amber-500/40 rounded-xl space-y-2.5">
+              <div className="flex items-center space-x-1.5 text-amber-400 font-semibold text-xs">
+                <Scissors className="w-4 h-4" />
+                <span>División Automática en Múltiples Macros (&lt;255 chars)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Dado que WoW limita las macros estándar a 255 caracteres, se ha dividido en las siguientes partes:
+              </p>
+
+              {validation.splitMacros.map((chunk, idx) => (
+                <div key={idx} className="p-2 bg-[#0a0e14] rounded-lg border border-[#253243] space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold font-mono text-amber-300 uppercase">
+                      Parte {idx + 1} ({chunk.length} caracteres)
+                    </span>
+                    <button
+                      onClick={() => handleCopy(chunk, true, idx)}
+                      className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black text-[10px] font-bold transition flex items-center space-x-1"
+                    >
+                      {copiedSplitIndex === idx ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedSplitIndex === idx ? 'Copiado' : 'Copiar Parte ' + (idx + 1)}</span>
+                    </button>
+                  </div>
+                  <pre className="text-[10px] font-mono text-gray-300 whitespace-pre-wrap">{chunk}</pre>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+
+        {/* Copy & Controls Bottom Bar */}
+        <div className="pt-3 mt-2 border-t border-[#1e2736] space-y-2">
+          
+          <div className="flex items-center justify-between">
+            <label className="flex items-center space-x-2 text-[11px] text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeComments}
+                onChange={(e) => setIncludeComments(e.target.checked)}
+                className="w-3.5 h-3.5 rounded bg-[#0a0e14] border-[#2b3848] text-amber-500 focus:ring-0"
+              />
+              <span>Incluir notas / comentarios</span>
+            </label>
+
+            <span className="text-[10px] text-gray-500">Formato compatible WoW 3.3.5a</span>
+          </div>
+
+          {/* Main Copy Button */}
+          <button
+            onClick={() => handleCopy(validation.cleanCode)}
+            disabled={!validation.cleanCode}
+            className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg ${
+              copiedMain
+                ? 'bg-emerald-500 text-black shadow-glow-fel'
+                : 'bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-glow-gold'
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            {copiedMain ? (
+              <>
+                <Check className="w-4 h-4 stroke-[3]" />
+                <span>¡Copiado al Portapapeles! Listo para WoW</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 stroke-[2.5]" />
+                <span>Copiar Macro para el Juego (Ctrl+V)</span>
+              </>
+            )}
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+};
