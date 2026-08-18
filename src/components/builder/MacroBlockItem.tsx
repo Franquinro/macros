@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MacroBlock, ConditionBracket } from '../../types/macro';
 import { formatBracket } from '../../utils/macroGenerator';
+import { validateBracket } from '../../utils/conditionValidator';
 import { 
   GripVertical, 
   ChevronUp, 
@@ -12,7 +13,8 @@ import {
   EyeOff, 
   MessageSquare, 
   Plus, 
-  HelpCircle 
+  HelpCircle,
+  AlertTriangle 
 } from 'lucide-react';
 
 interface MacroBlockItemProps {
@@ -150,16 +152,26 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
           {/* Conditions Badges */}
           {block.brackets && block.brackets.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1">
-              {block.brackets.map((br, bIdx) => (
-                <button
-                  key={br.id || bIdx}
-                  onClick={() => onOpenConditions(block)}
-                  className="font-mono text-[11px] px-2 py-0.5 rounded bg-[#1e2a3b] hover:bg-[#27384f] text-sky-300 border border-sky-500/30 transition flex items-center space-x-1 shadow-sm"
-                  title="Editar condición"
-                >
-                  <span>{formatBracket(br)}</span>
-                </button>
-              ))}
+              {block.brackets.map((br, bIdx) => {
+                const brVal = validateBracket(br);
+                return (
+                  <button
+                    key={br.id || bIdx}
+                    onClick={() => onOpenConditions(block)}
+                    className={`font-mono text-[11px] px-2 py-0.5 rounded transition flex items-center space-x-1 shadow-sm ${
+                      brVal.isImpossible
+                        ? 'bg-rose-950/60 text-rose-300 border border-rose-500/60 shadow-glow-blood animate-pulse'
+                        : brVal.issues.length > 0
+                        ? 'bg-amber-950/60 text-amber-300 border border-amber-500/60'
+                        : 'bg-[#1e2a3b] hover:bg-[#27384f] text-sky-300 border border-sky-500/30'
+                    }`}
+                    title={brVal.issues.length > 0 ? brVal.issues.map(i => i.title).join(' | ') : 'Editar condición'}
+                  >
+                    <span>{formatBracket(br)}</span>
+                    {brVal.isImpossible && <AlertTriangle className="w-3 h-3 text-rose-400" />}
+                  </button>
+                );
+              })}
             </div>
           ) : null}
 

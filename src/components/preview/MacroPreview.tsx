@@ -136,10 +136,24 @@ export const MacroPreview: React.FC<MacroPreviewProps> = ({
               {validation.warnings.map((warn, i) => (
                 <div
                   key={i}
-                  className="p-2 rounded-lg bg-red-950/30 border border-red-500/30 text-red-300 text-[11px] flex items-start space-x-1.5"
+                  className="p-2.5 rounded-lg bg-red-950/40 border border-red-500/40 text-red-200 text-[11px] flex items-start space-x-2 shadow-sm"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
-                  <span>{warn}</span>
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{warn}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {validation.tips.length > 0 && (
+            <div className="space-y-1">
+              {validation.tips.map((tip, i) => (
+                <div
+                  key={i}
+                  className="p-2 rounded-lg bg-sky-950/30 border border-sky-500/30 text-sky-200 text-[11px] flex items-start space-x-2"
+                >
+                  <Info className="w-3.5 h-3.5 text-sky-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{tip}</span>
                 </div>
               ))}
             </div>

@@ -1,4 +1,5 @@
 import { MacroBlock, MacroValidation, ConditionBracket, ConditionRule } from '../types/macro';
+import { validateBracket } from './conditionValidator';
 
 /**
  * Formats a single condition rule into 3.3.5a syntax
@@ -124,6 +125,24 @@ export function generateMacro(blocks: MacroBlock[], includeComments: boolean = f
     warnings.push(`¡La macro supera el límite de 255 caracteres de WoW 3.3.5a por ${charCount - 255} caracteres!`);
     tips.push('Consejo: Puedes usar el botón de dividir en múltiples macros o eliminar espacios/nombres redundantes.');
   }
+
+  // Validate condition brackets for logical impossibilities
+  activeBlocks.forEach((block, bIdx) => {
+    if (!block.brackets || block.brackets.length === 0) return;
+    block.brackets.forEach((br, brIdx) => {
+      const result = validateBracket(br);
+      result.issues.forEach(issue => {
+        if (issue.severity === 'error') {
+          warnings.push(`⚠️ Línea ${bIdx + 1} (${block.command}), Paso ${brIdx + 1}: ${issue.title} - ${issue.description}`);
+          if (issue.suggestion) {
+            tips.push(`💡 Sugerencia Línea ${bIdx + 1}: ${issue.suggestion}`);
+          }
+        } else {
+          tips.push(`ℹ️ Línea ${bIdx + 1}: ${issue.title} - ${issue.description}`);
+        }
+      });
+    });
+  });
 
   // Check if multiple /cast commands without instant cast or conditions
   const castBlocks = activeBlocks.filter(b => b.command === '/cast' || b.command === '/castsequence');
