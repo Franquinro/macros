@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { MacroData, MacroValidation } from '../../types/macro';
 import { generateMacro } from '../../utils/macroGenerator';
+import { compressMacroCode, CompressionResult } from '../../utils/macroCompressor';
+import { MacroCodeHighlighter } from './MacroCodeHighlighter';
 import { 
   Copy, 
   Check, 
   AlertTriangle, 
-  Sparkles, 
-  Layers, 
   FileCode, 
-  FileText, 
-  Info,
-  ExternalLink,
-  Code2,
-  Scissors
+  Info, 
+  Code2, 
+  Scissors,
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -26,10 +26,22 @@ export const MacroPreview: React.FC<MacroPreviewProps> = ({
   onOpenImportText
 }) => {
   const [includeComments, setIncludeComments] = useState(false);
+  const [isCompressed, setIsCompressed] = useState(false);
   const [copiedMain, setCopiedMain] = useState(false);
   const [copiedSplitIndex, setCopiedSplitIndex] = useState<number | null>(null);
 
   const validation: MacroValidation = generateMacro(macro.blocks, includeComments);
+  const compression: CompressionResult = compressMacroCode(macro.blocks, {
+    useInsteadOfCast: true,
+    shortenTargetCommands: true,
+    compactBrackets: true,
+    stripComments: !includeComments,
+    stripRedundantShowtooltip: false
+  });
+
+  const activeCode = isCompressed ? compression.compressedCode : validation.cleanCode;
+  const activeChars = isCompressed ? compression.compressedChars : validation.charCount;
+  const isOverLimit = activeChars > 255;
 
   const handleCopy = (text: string, isSplit: boolean = false, splitIdx: number = 0) => {
     if (!text) return;
@@ -58,12 +70,12 @@ export const MacroPreview: React.FC<MacroPreviewProps> = ({
 
   // Color for 255 character gauge
   const getProgressColor = () => {
-    if (validation.charCount > 255) return 'bg-red-500 shadow-glow-blood';
-    if (validation.charCount > 210) return 'bg-amber-500 shadow-glow-gold';
+    if (activeChars > 255) return 'bg-red-500 shadow-glow-blood';
+    if (activeChars > 210) return 'bg-amber-500 shadow-glow-gold';
     return 'bg-emerald-500 shadow-glow-fel';
   };
 
-  const percentage = Math.min(100, Math.round((validation.charCount / 255) * 100));
+  const percentage = Math.min(100, Math.round((activeChars / 255) * 100));
 
   return (
     <div className="bg-[#121820] border border-[#232c37] rounded-xl flex flex-col h-full overflow-hidden shadow-xl">
@@ -73,37 +85,63 @@ export const MacroPreview: React.FC<MacroPreviewProps> = ({
         <div className="flex items-center space-x-2">
           <FileCode className="w-4 h-4 text-amber-400" />
           <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider font-display">
-            Código Generado WoW 3.3.5a
+            Código WoW 3.3.5a
           </h2>
         </div>
 
-        <button
-          onClick={onOpenImportText}
-          className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center space-x-1 transition"
-          title="Importar macro existente pegando texto"
-        >
-          <Code2 className="w-3.5 h-3.5" />
-          <span>Importar Texto</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          {/* Shorten / Compression Toggle */}
+          <button
+            onClick={() => setIsCompressed(!isCompressed)}
+            className={`text-xs px-2.5 py-1 rounded-lg border font-semibold flex items-center space-x-1.5 transition ${
+              isCompressed
+                ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-glow-gold'
+                : 'bg-[#172230] border-[#293a4f] text-gray-400 hover:text-gray-200 hover:bg-[#1f2e42]'
+            }`}
+            title="Optimizar y acortar macro (/cast -> /use, /target -> /tar, etc.) para ahorrar caracteres"
+          >
+            <Zap className={`w-3.5 h-3.5 ${isCompressed ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`} />
+            <span>{isCompressed ? 'Comprimido' : 'Comprimir'}</span>
+            {isCompressed && compression.savedChars > 0 && (
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded-full font-mono font-bold">
+                -{compression.savedChars}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={onOpenImportText}
+            className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center space-x-1 transition px-2 py-1 rounded bg-[#16202c] hover:bg-[#1d2b3c] border border-[#26374a]"
+            title="Importar macro existente pegando texto"
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span>Importar</span>
+          </button>
+        </div>
       </div>
 
       {/* 255 Character Counter Gauge */}
       <div className="px-4 py-2.5 bg-[#0d121a] border-b border-[#202936]">
         <div className="flex items-center justify-between text-xs mb-1.5">
-          <span className="text-gray-400 font-medium flex items-center space-x-1">
-            <span>Límite de Caracteres:</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-400 font-medium">Límite de Caracteres:</span>
             <span className="font-mono font-bold text-gray-200">
-              {validation.charCount} / 255
+              {activeChars} / 255
             </span>
-          </span>
-          {validation.isOverLimit ? (
+            {isCompressed && compression.savedChars > 0 && (
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+                Ahorro: -{compression.savedChars} chars ({compression.savingsPercent}%)
+              </span>
+            )}
+          </div>
+          {isOverLimit ? (
             <span className="text-red-400 font-bold flex items-center space-x-1 animate-pulse">
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>+{validation.charCount - 255} sobre el límite</span>
+              <span>+{activeChars - 255} sobre el límite</span>
             </span>
           ) : (
             <span className="text-emerald-400 font-medium">
-              {255 - validation.charCount} restantes
+              {255 - activeChars} restantes
             </span>
           )}
         </div>
@@ -117,18 +155,28 @@ export const MacroPreview: React.FC<MacroPreviewProps> = ({
         </div>
       </div>
 
-      {/* Code Viewer */}
+      {/* Code Viewer with Syntax Highlighter */}
       <div className="flex-1 p-3 bg-[#080b0f] flex flex-col justify-between overflow-y-auto">
         <div className="space-y-2">
-          <div className="relative">
-            <pre className="font-mono text-xs text-gray-200 bg-[#0d1117] p-3 rounded-lg border border-[#232c37] overflow-x-auto min-h-[160px] whitespace-pre-wrap leading-relaxed select-all">
-              {validation.cleanCode || (
-                <span className="text-gray-600 italic">
-                  -- La macro generada aparecerá aquí cuando agregues bloques...
-                </span>
-              )}
-            </pre>
+          
+          <div className="relative font-mono text-xs bg-[#0d1117] p-3 rounded-lg border border-[#232c37] overflow-x-auto min-h-[160px]">
+            <MacroCodeHighlighter code={activeCode} />
           </div>
+
+          {/* Applied optimizations pill list if compressed */}
+          {isCompressed && compression.optimizationsApplied.length > 0 && (
+            <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-[11px] text-amber-300 space-y-0.5">
+              <div className="font-bold flex items-center space-x-1 mb-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Optimizaciones de compresión aplicadas:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-0.5 text-[10px] text-gray-300 font-mono">
+                {compression.optimizationsApplied.map((opt, oIdx) => (
+                  <li key={oIdx}>{opt}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Warnings & Tips */}
           {validation.warnings.length > 0 && (
@@ -160,7 +208,7 @@ export const MacroPreview: React.FC<MacroPreviewProps> = ({
           )}
 
           {/* Split Macros Preview if > 255 chars */}
-          {validation.isOverLimit && validation.splitMacros && validation.splitMacros.length > 1 && (
+          {isOverLimit && validation.splitMacros && validation.splitMacros.length > 1 && (
             <div className="mt-3 p-3 bg-[#131b26] border border-amber-500/40 rounded-xl space-y-2.5">
               <div className="flex items-center space-x-1.5 text-amber-400 font-semibold text-xs">
                 <Scissors className="w-4 h-4" />
@@ -211,8 +259,8 @@ export const MacroPreview: React.FC<MacroPreviewProps> = ({
 
           {/* Main Copy Button */}
           <button
-            onClick={() => handleCopy(validation.cleanCode)}
-            disabled={!validation.cleanCode}
+            onClick={() => handleCopy(activeCode)}
+            disabled={!activeCode}
             className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg ${
               copiedMain
                 ? 'bg-emerald-500 text-black shadow-glow-fel'

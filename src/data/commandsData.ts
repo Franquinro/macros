@@ -336,18 +336,54 @@ export const COMMANDS_CATALOG: CommandDefinition[] = [
     tags: ['raid', 'banda']
   },
 
-  // Script & Lua
+  // Script & Lua Utility (Anti-Errors & Audio Spam)
   {
     command: '/run',
-    name: 'Script Lua (/run o /script)',
+    name: 'Limpiar Texto de Error (/run UIErrorsFrame:Clear())',
     category: 'utility',
-    description: 'Ejecuta una línea de código Lua nativo de WoW 3.3.5a (mensajes condicionales, clicks en interfaces, etc.).',
+    description: 'Elimina inmediatamente los textos rojos de error en el centro de la pantalla ("Aún no puedes hacer eso", "Fuera de alcance"). Indispensable para macros con spam de abalorios.',
     example: '/run UIErrorsFrame:Clear()',
     defaultArg: 'UIErrorsFrame:Clear()',
     supportsConditionals: false,
     color: 'text-pink-400 border-pink-500/40 bg-pink-950/20',
-    icon: 'Code2',
-    tags: ['lua', 'script', 'run', 'avanzado']
+    icon: 'ShieldAlert',
+    tags: ['error', 'clear', 'uierrorsframe', 'spam', 'silenciosa', 'run', 'lua']
+  },
+  {
+    command: '/run',
+    name: 'Silenciar Audio de Error (Sound_EnableSFX)',
+    category: 'utility',
+    description: 'Desactiva temporalmente el audio de error antes de spamear abalorios y habilidades en cooldown.',
+    example: '/run SetCVar("Sound_EnableSFX","0")',
+    defaultArg: 'SetCVar("Sound_EnableSFX","0")',
+    supportsConditionals: false,
+    color: 'text-pink-300 border-pink-500/30 bg-pink-950/20',
+    icon: 'VolumeX',
+    tags: ['audio', 'sonido', 'sound', 'sfx', 'silenciosa', 'run']
+  },
+  {
+    command: '/dismount',
+    name: 'Desmontar (/dismount)',
+    category: 'utility',
+    description: 'Desmonta inmediatamente si vas sobre una montura.',
+    example: '/dismount [mounted]',
+    defaultArg: '',
+    supportsConditionals: true,
+    color: 'text-indigo-400 border-indigo-500/30 bg-indigo-950/20',
+    icon: 'Footprints',
+    tags: ['dismount', 'montura', 'desmontar']
+  },
+  {
+    command: '/tar',
+    name: 'Seleccionar Objetivo Abreviado (/tar)',
+    category: 'targeting',
+    description: 'Versión abreviada oficial de /target que ahorra 3 caracteres.',
+    example: '/tar [@mouseover,exists]',
+    defaultArg: '',
+    supportsConditionals: true,
+    color: 'text-teal-400 border-teal-500/40 bg-teal-950/20',
+    icon: 'Crosshair',
+    tags: ['tar', 'target', 'shorten', 'comprimir']
   },
 
   // Project Ascension / CoA Specific

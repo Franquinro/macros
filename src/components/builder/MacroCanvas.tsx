@@ -13,13 +13,16 @@ import {
   Zap,
   Flame,
   ShieldAlert,
-  Sliders
+  Sliders,
+  RotateCcw,
+  VolumeX
 } from 'lucide-react';
 
 interface MacroCanvasProps {
   macro: MacroData;
   onUpdateMacro: (updated: MacroData) => void;
   onOpenConditions: (block: MacroBlock) => void;
+  onOpenCastSequence: (block: MacroBlock) => void;
   onQuickAddBlock: (cmd: string, arg?: string) => void;
 }
 
@@ -27,6 +30,7 @@ export const MacroCanvas: React.FC<MacroCanvasProps> = ({
   macro,
   onUpdateMacro,
   onOpenConditions,
+  onOpenCastSequence,
   onQuickAddBlock
 }) => {
   const handleUpdateBlock = (updatedBlock: MacroBlock) => {
@@ -146,6 +150,12 @@ export const MacroCanvas: React.FC<MacroCanvasProps> = ({
             /cast
           </button>
           <button
+            onClick={() => onQuickAddBlock('/castsequence', 'reset=combat/target/6 Spell1, Spell2')}
+            className="px-2 py-1 rounded bg-[#161f2b] hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-mono transition"
+          >
+            /castsequence
+          </button>
+          <button
             onClick={() => onQuickAddBlock('/use', '13')}
             className="px-2 py-1 rounded bg-[#161f2b] hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-mono transition"
           >
@@ -162,6 +172,14 @@ export const MacroCanvas: React.FC<MacroCanvasProps> = ({
             className="px-2 py-1 rounded bg-[#161f2b] hover:bg-red-500/20 text-red-300 border border-red-500/30 text-[11px] font-mono transition"
           >
             /stopcasting
+          </button>
+          <button
+            onClick={() => onQuickAddBlock('/run', 'UIErrorsFrame:Clear()')}
+            className="px-2 py-1 rounded bg-[#161f2b] hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[11px] font-mono transition flex items-center space-x-1"
+            title="Limpia texto de error en pantalla al spamear la macro"
+          >
+            <ShieldAlert className="w-3 h-3 text-pink-400" />
+            <span>🔇 Anti-Error</span>
           </button>
         </div>
 
@@ -203,6 +221,12 @@ export const MacroCanvas: React.FC<MacroCanvasProps> = ({
               >
                 + Añadir /cast
               </button>
+              <button
+                onClick={() => onQuickAddBlock('/castsequence', 'reset=combat/target/6 Spell1, Spell2')}
+                className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-semibold hover:bg-indigo-500/30 transition"
+              >
+                + Añadir /castsequence
+              </button>
             </div>
           </div>
         ) : (
@@ -218,6 +242,7 @@ export const MacroCanvas: React.FC<MacroCanvasProps> = ({
               onMoveUp={handleMoveUp}
               onMoveDown={handleMoveDown}
               onOpenConditions={onOpenConditions}
+              onOpenCastSequence={onOpenCastSequence}
             />
           ))
         )}

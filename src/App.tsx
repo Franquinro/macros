@@ -16,6 +16,7 @@ import { BlockPalette } from './components/builder/BlockPalette';
 import { MacroCanvas } from './components/builder/MacroCanvas';
 import { MacroPreview } from './components/preview/MacroPreview';
 import { ConditionModal } from './components/builder/ConditionModal';
+import { CastSequenceModal } from './components/builder/CastSequenceModal';
 import { PresetsModal } from './components/presets/PresetsModal';
 import { CoaHubModal } from './components/coa/CoaHubModal';
 import { MyMacrosModal } from './components/common/MyMacrosModal';
@@ -52,6 +53,7 @@ export const App: React.FC = () => {
   const [isMyMacrosOpen, setIsMyMacrosOpen] = useState(false);
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [conditionBlock, setConditionBlock] = useState<MacroBlock | null>(null);
+  const [castSequenceBlock, setCastSequenceBlock] = useState<MacroBlock | null>(null);
 
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -167,6 +169,20 @@ export const App: React.FC = () => {
     addToast('success', 'Condiciones actualizadas.');
   };
 
+  const handleSaveCastSequenceArgument = (newArg: string) => {
+    if (!castSequenceBlock) return;
+    const updatedBlocks = currentMacro.blocks.map(b => 
+      b.id === castSequenceBlock.id ? { ...b, argument: newArg } : b
+    );
+    setCurrentMacro({
+      ...currentMacro,
+      blocks: updatedBlocks,
+      updatedAt: Date.now()
+    });
+    setCastSequenceBlock(null);
+    addToast('success', 'Secuencia /castsequence actualizada.');
+  };
+
   return (
     <div className="min-h-screen bg-[#090c10] text-gray-100 flex flex-col selection:bg-amber-500 selection:text-black">
       
@@ -208,25 +224,25 @@ export const App: React.FC = () => {
               }`}
             >
               <Play className="w-4 h-4" />
-              <span>Simulador Interactivo</span>
+              <span>Simulador de Ejecución</span>
             </button>
 
             <button
               onClick={() => setActiveTab('guide')}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition font-display uppercase tracking-wider ${
                 activeTab === 'guide'
-                  ? 'bg-sky-500 text-black shadow-glow-frost'
+                  ? 'bg-gradient-to-r from-sky-500 to-indigo-500 text-black shadow-glow-frost'
                   : 'bg-[#121820] text-gray-400 hover:text-gray-200 border border-[#232c37]'
               }`}
             >
               <BookOpen className="w-4 h-4" />
-              <span>Guía de Sintaxis 3.3.5a</span>
+              <span>Manual y Sintaxis WoW 3.3.5a</span>
             </button>
           </div>
 
-          <div className="hidden md:flex items-center space-x-2 text-[11px] text-gray-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Modo de Compatibilidad WotLK Activo</span>
+          <div className="hidden sm:flex items-center space-x-2 text-xs text-gray-400">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Motor inteligente 3.3.5a</span>
           </div>
         </div>
 
@@ -234,7 +250,7 @@ export const App: React.FC = () => {
         {activeTab === 'builder' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             
-            {/* Left Column: Command Palette (3 Cols) */}
+            {/* Left Column: Command Catalog / Palette (3 Cols) */}
             <div className="lg:col-span-3">
               <BlockPalette onAddCommand={handleAddCommandFromPalette} />
             </div>
@@ -245,6 +261,7 @@ export const App: React.FC = () => {
                 macro={currentMacro}
                 onUpdateMacro={setCurrentMacro}
                 onOpenConditions={(b) => setConditionBlock(b)}
+                onOpenCastSequence={(b) => setCastSequenceBlock(b)}
                 onQuickAddBlock={handleQuickAddBlock}
               />
             </div>
@@ -377,6 +394,15 @@ export const App: React.FC = () => {
           isOpen={!!conditionBlock}
           onClose={() => setConditionBlock(null)}
           onSave={handleSaveConditionBrackets}
+        />
+      )}
+
+      {castSequenceBlock && (
+        <CastSequenceModal
+          block={castSequenceBlock}
+          isOpen={!!castSequenceBlock}
+          onClose={() => setCastSequenceBlock(null)}
+          onSave={handleSaveCastSequenceArgument}
         />
       )}
 

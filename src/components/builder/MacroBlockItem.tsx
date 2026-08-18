@@ -14,7 +14,8 @@ import {
   MessageSquare, 
   Plus, 
   HelpCircle,
-  AlertTriangle 
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 
 interface MacroBlockItemProps {
@@ -27,6 +28,7 @@ interface MacroBlockItemProps {
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
   onOpenConditions: (block: MacroBlock) => void;
+  onOpenCastSequence?: (block: MacroBlock) => void;
 }
 
 export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
@@ -38,7 +40,8 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
   onDuplicateBlock,
   onMoveUp,
   onMoveDown,
-  onOpenConditions
+  onOpenConditions,
+  onOpenCastSequence
 }) => {
   const [showComment, setShowComment] = useState(!!block.comment);
 
@@ -86,6 +89,7 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
       case '/equipslot':
         return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
       case '/target':
+      case '/tar':
       case '/focus':
         return 'text-teal-400 bg-teal-500/10 border-teal-500/30';
       case '/petattack':
@@ -191,12 +195,28 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
             </span>
           </button>
 
+          {/* Castsequence assistant button if applicable */}
+          {block.command === '/castsequence' && onOpenCastSequence && (
+            <button
+              onClick={() => onOpenCastSequence(block)}
+              className="flex items-center space-x-1 px-2 py-1 rounded-md text-[11px] font-semibold border bg-indigo-500/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-500/30 transition shadow-sm"
+              title="Abrir editor visual de secuencia de habilidades"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Rotación</span>
+            </button>
+          )}
+
           {/* Argument Input (Spell Name, item, slot, text) */}
           <input
             type="text"
             value={block.argument}
             onChange={handleArgChange}
-            placeholder="Nombre de habilidad, ítem o ranura (ej. Flash of Light, 13, etc.)"
+            placeholder={
+              block.command === '/castsequence'
+                ? 'reset=combat/target/6 Spell1, Spell2'
+                : 'Nombre de habilidad, ítem o ranura (ej. Flash of Light, 13, etc.)'
+            }
             className="flex-1 min-w-[180px] bg-[#0c1017] border border-[#263345] focus:border-amber-500/60 rounded-lg px-2.5 py-1 text-xs text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500/30 font-mono transition"
           />
         </div>
