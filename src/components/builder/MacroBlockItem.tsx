@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MacroBlock } from '../../types/macro';
 import { formatBracket } from '../../utils/macroGenerator';
 import { validateBracket } from '../../utils/conditionValidator';
-import { searchCoaSpells } from '../../data/coaSpells';
+import { searchCoaSpells, getSpellIconUrl } from '../../data/coaSpells';
 import { 
   ChevronUp, 
   ChevronDown, 
@@ -260,20 +260,28 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
                         e.preventDefault();
                         handleSelectSpell(s.name);
                       }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 hover:text-amber-200 text-gray-200 text-xs flex items-center justify-between transition group"
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 hover:text-amber-200 text-gray-200 text-xs flex items-center justify-between transition group gap-2"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium font-mono group-hover:text-amber-300">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {s.icon && (
+                          <img
+                            src={getSpellIconUrl(s.icon)}
+                            alt=""
+                            className="w-5 h-5 rounded border border-[#2a374a] object-cover shrink-0"
+                            loading="lazy"
+                          />
+                        )}
+                        <span className="font-medium font-mono group-hover:text-amber-300 truncate">
                           {s.name}
                         </span>
                         {s.ranks && s.ranks.length > 0 && (
-                          <span className="text-[10px] text-gray-500 font-sans">
+                          <span className="text-[10px] text-gray-500 font-sans shrink-0">
                             ({s.ranks.length} {s.ranks.length === 1 ? 'rango' : 'rangos'})
                           </span>
                         )}
                       </div>
                       {s.className && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-semibold uppercase">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-semibold uppercase shrink-0">
                           {s.className}
                         </span>
                       )}
