@@ -14,10 +14,8 @@ import {
   BookOpen, 
   Plus, 
   Check, 
-  HelpCircle,
-  Clock,
-  ZapOff,
-  Crosshair
+  Globe,
+  Clock
 } from 'lucide-react';
 
 interface CoaHubModalProps {
@@ -29,13 +27,13 @@ interface CoaHubModalProps {
 
 interface SpellCardProps {
   spell: CoaGroupedSpell;
+  lang: 'es' | 'en';
   onAddSpell: (spellText: string) => void;
   isRecentlyAdded: boolean;
 }
 
-const SpellCard: React.FC<SpellCardProps> = ({ spell, onAddSpell, isRecentlyAdded }) => {
+const SpellCard: React.FC<SpellCardProps> = ({ spell, lang, onAddSpell, isRecentlyAdded }) => {
   const [selectedRank, setSelectedRank] = useState<string>('');
-  const [showTooltip, setShowTooltip] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const handleAdd = () => {
@@ -47,14 +45,18 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, onAddSpell, isRecentlyAdde
     ? 'https://db.ascension.gg/static/images/wow/icons/medium/inv_misc_questionmark.jpg' 
     : getSpellIconUrl(spell.icon);
 
+  const activeDescription = lang === 'es' 
+    ? (spell.descriptionEs || spell.descriptionEn) 
+    : (spell.descriptionEn || spell.descriptionEs);
+
   return (
-    <div className="relative p-3 rounded-xl bg-[#151c27] border border-[#222f40] hover:border-emerald-500/40 transition flex flex-col justify-between group shadow-sm">
+    <div className="p-3.5 rounded-xl bg-[#141b26] border border-[#222f42] hover:border-emerald-500/50 transition flex flex-col justify-between group shadow-md hover:shadow-lg">
       
-      {/* Top Header: Icon + Name + Class */}
-      <div>
-        <div className="flex items-start gap-2.5 mb-2">
+      {/* Top Header: Icon + Name + Class + Cast Info */}
+      <div className="space-y-2.5">
+        <div className="flex items-start gap-2.5">
           {/* Spell Icon */}
-          <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-[#3b4c63] shrink-0 bg-[#090d13] shadow-inner">
+          <div className="relative w-11 h-11 rounded-lg overflow-hidden border-2 border-[#2b3a4e] group-hover:border-emerald-500/60 shrink-0 bg-[#090d13] shadow-inner transition">
             <img
               src={iconSrc}
               alt={spell.name}
@@ -64,26 +66,21 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, onAddSpell, isRecentlyAdde
             />
           </div>
 
-          {/* Name & Class */}
+          {/* Name & Badges */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-1">
-              <div 
-                className="text-xs font-bold text-gray-100 group-hover:text-emerald-300 transition truncate cursor-pointer flex items-center gap-1"
-                onClick={() => setShowTooltip(!showTooltip)}
-                title="Clic para ver detalles de la habilidad"
-              >
-                <span className="truncate">{spell.name}</span>
-                <HelpCircle className="w-3 h-3 text-gray-500 hover:text-emerald-400 shrink-0" />
-              </div>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-semibold uppercase shrink-0">
+            <div className="flex items-start justify-between gap-1">
+              <h4 className="text-xs font-bold text-gray-100 group-hover:text-emerald-300 transition truncate font-display">
+                {spell.name}
+              </h4>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold uppercase shrink-0">
                 {spell.className}
               </span>
             </div>
 
-            {/* Cost / Cast badges */}
-            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400 flex-wrap">
+            {/* Combat Parameters (Cost / Cast / CD / Range) */}
+            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400 flex-wrap font-mono">
               {spell.cost && (
-                <span className="text-sky-300 font-mono font-medium">
+                <span className="text-sky-300 font-semibold">
                   {spell.cost}
                 </span>
               )}
@@ -93,94 +90,43 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, onAddSpell, isRecentlyAdde
                 </span>
               )}
               {spell.cooldown && (
-                <span className="text-amber-300 font-mono">
+                <span className="text-amber-300 font-semibold">
                   • {spell.cooldown}
+                </span>
+              )}
+              {spell.range && (
+                <span className="text-gray-500">
+                  • {spell.range}
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Short Spanish preview if available */}
-        {spell.descriptionEs ? (
-          <p className="text-[11px] text-gray-300 line-clamp-2 leading-relaxed mb-2 bg-[#0c1118] p-1.5 rounded-lg border border-[#1b2533]">
-            {spell.descriptionEs}
-          </p>
-        ) : spell.descriptionEn ? (
-          <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed mb-2 bg-[#0c1118] p-1.5 rounded-lg border border-[#1b2533]">
-            {spell.descriptionEn}
-          </p>
-        ) : null}
+        {/* Direct Spell Description in Card (No tooltips) */}
+        <div className="p-2.5 rounded-lg bg-[#0c121a] border border-[#1c2738] min-h-[58px] flex items-center">
+          {activeDescription ? (
+            <p className="text-[11px] text-gray-200 leading-relaxed">
+              {activeDescription}
+            </p>
+          ) : (
+            <p className="text-[11px] text-gray-500 italic">
+              {lang === 'es' ? 'Habilidad instantánea / pasiva de combate.' : 'Instant or passive combat ability.'}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Floating Detailed WoW Tooltip modal/popover */}
-      {showTooltip && (
-        <div className="absolute left-2 right-2 bottom-full mb-2 z-50 p-3 bg-[#0a0d14]/98 border-2 border-amber-500/60 rounded-xl shadow-2xl backdrop-blur-md animate-in fade-in">
-          <div className="flex items-start justify-between border-b border-[#222d3d] pb-2 mb-2">
-            <div className="flex items-center gap-2">
-              <img src={iconSrc} alt={spell.name} className="w-8 h-8 rounded border border-amber-500/50" />
-              <div>
-                <h4 className="text-sm font-bold text-amber-300 font-display">{spell.name}</h4>
-                <div className="text-[10px] text-emerald-400 font-semibold">{spell.className}</div>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowTooltip(false)}
-              className="text-gray-400 hover:text-white p-1"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="text-xs space-y-2 text-gray-200">
-            {/* Cast & Range info */}
-            <div className="flex justify-between text-[11px] text-gray-400 font-mono">
-              <span>{spell.castTime || 'Instantáneo'}</span>
-              <span>{spell.range || (spell.cost ? spell.cost : '')}</span>
-            </div>
-            {spell.cooldown && (
-              <div className="text-[11px] text-amber-400 font-mono">
-                Cooldown: {spell.cooldown}
-              </div>
-            )}
-
-            {/* Spanish Description */}
-            {spell.descriptionEs && (
-              <div className="pt-2 border-t border-[#1b2432]">
-                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block mb-0.5">
-                  🇪🇸 Descripción (Español):
-                </span>
-                <p className="text-xs text-amber-100/90 leading-relaxed">
-                  {spell.descriptionEs}
-                </p>
-              </div>
-            )}
-
-            {/* English Original Description */}
-            {spell.descriptionEn && (
-              <div className="pt-2 border-t border-[#1b2432]">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">
-                  🇬🇧 Original (English):
-                </span>
-                <p className="text-[11px] text-gray-400 leading-relaxed italic">
-                  {spell.descriptionEn}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Bottom Controls: Rank Selector + Add Button */}
-      <div className="flex items-center gap-2 pt-2 border-t border-[#1c2738]">
+      <div className="flex items-center gap-2 pt-2.5 mt-2.5 border-t border-[#1e2b3c]">
         {spell.ranks && spell.ranks.length > 0 ? (
           <select
             value={selectedRank}
             onChange={(e) => setSelectedRank(e.target.value)}
-            className="flex-1 bg-[#0d121a] border border-[#273445] rounded-lg px-2 py-1 text-[11px] text-amber-200 focus:outline-none focus:border-emerald-500 font-mono transition truncate"
+            className="flex-1 bg-[#090d14] border border-[#273548] hover:border-emerald-500/50 rounded-lg px-2 py-1.5 text-[11px] text-amber-200 focus:outline-none focus:border-emerald-500 font-mono transition truncate"
             title="Seleccionar rango específico (por defecto se usa el rango máximo)"
           >
-            <option value="">Rango Máx (Auto)</option>
+            <option value="">Rango Máx (Por defecto)</option>
             {spell.ranks.map((r, rIdx) => (
               <option key={rIdx} value={r}>
                 {r}
@@ -188,7 +134,7 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, onAddSpell, isRecentlyAdde
             ))}
           </select>
         ) : (
-          <div className="flex-1 text-[11px] text-gray-500 font-mono">
+          <div className="flex-1 text-[11px] text-gray-500 font-mono pl-1">
             Rango único
           </div>
         )}
@@ -196,12 +142,12 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, onAddSpell, isRecentlyAdde
         <button
           type="button"
           onClick={handleAdd}
-          className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition flex items-center space-x-1 shrink-0 ${
+          className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition flex items-center space-x-1 shrink-0 ${
             isRecentlyAdded
               ? 'bg-emerald-500 text-black border-emerald-400 shadow-glow-fel'
-              : 'bg-[#1a2535] text-gray-200 border-[#2f3f54] hover:bg-emerald-500 hover:text-black hover:border-emerald-400'
+              : 'bg-[#1b2738] text-gray-100 border-[#2f425b] hover:bg-emerald-500 hover:text-black hover:border-emerald-400'
           }`}
-          title="Añadir a la macro (/cast)"
+          title="Añadir a la macro activa (/cast)"
         >
           {isRecentlyAdded ? (
             <>
@@ -226,7 +172,8 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
   onLoadCoaMacro,
   onAddSpellBlock
 }) => {
-  const [activeTab, setActiveTab] = useState<'archetypes' | 'spellbook'>('spellbook');
+  const [activeTab, setActiveTab] = useState<'spellbook' | 'archetypes'>('spellbook');
+  const [lang, setLang] = useState<'es' | 'en'>('es');
   const [search, setSearch] = useState('');
   const [selectedArchetype, setSelectedArchetype] = useState<CoAArchetype>(COA_ARCHETYPES[0]);
   
@@ -303,7 +250,7 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-gray-400">
-                Base de datos completa con iconos oficiales, descripciones bilingües (ES / EN) y macros optimizadas.
+                Base de datos completa con iconos oficiales, descripciones integradas y macros listas para usar.
               </p>
             </div>
           </div>
@@ -315,8 +262,8 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="px-5 py-2.5 bg-[#0d121a] border-b border-[#202936] flex items-center justify-between gap-4">
+        {/* Tab Switcher + Global Language Toggle Bar */}
+        <div className="px-5 py-2.5 bg-[#0d121a] border-b border-[#202936] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setActiveTab('spellbook')}
@@ -327,7 +274,7 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Grimorio de Hechizos ({groupedSpells.length} Habilidades con Iconos)</span>
+              <span>Grimorio de Hechizos ({groupedSpells.length} Habilidades)</span>
             </button>
 
             <button
@@ -343,18 +290,50 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
             </button>
           </div>
 
-          <a
-            href="https://db.ascension.gg/?spells=7.12"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center space-x-1.5 text-xs text-amber-400/80 hover:text-amber-300 hover:underline"
-          >
-            <span>Ascension DB Online</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+          {/* Right Controls: Global Language Switcher */}
+          <div className="flex items-center space-x-2">
+            {activeTab === 'spellbook' && (
+              <div className="flex items-center bg-[#131b26] border border-[#27384d] rounded-lg p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setLang('es')}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center space-x-1.5 transition ${
+                    lang === 'es'
+                      ? 'bg-amber-500 text-black shadow-sm font-bold'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                  title="Mostrar descripciones en Español"
+                >
+                  <span>🇪🇸 Español</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang('en')}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center space-x-1.5 transition ${
+                    lang === 'en'
+                      ? 'bg-amber-500 text-black shadow-sm font-bold'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                  title="Mostrar descripciones originales en Inglés"
+                >
+                  <span>🇬🇧 English</span>
+                </button>
+              </div>
+            )}
+
+            <a
+              href="https://db.ascension.gg/?spells=7.12"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center space-x-1 text-xs text-amber-400/80 hover:text-amber-300 hover:underline px-2 py-1"
+            >
+              <span>Ascension DB</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
 
-        {/* TAB 1: COMPLETE COA SPELLBOOK EXPLORER WITH ICONS & TOOLTIPS */}
+        {/* TAB 1: COMPLETE COA SPELLBOOK EXPLORER WITH EMBEDDED DESCRIPTIONS */}
         {activeTab === 'spellbook' && (
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             
@@ -421,22 +400,23 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
                     type="text"
                     value={spellSearch}
                     onChange={(e) => setSpellSearch(e.target.value)}
-                    placeholder="Buscar por nombre o descripción (ej. sangrado, fuego, pyro...)"
+                    placeholder="Buscar por nombre o descripción (ej. sangrado, fuego, daño...)"
                     className="w-full pl-9 pr-3 py-1.5 bg-[#141c27] border border-[#273445] rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 <div className="text-xs text-gray-400">
-                  Mostrando <strong className="text-emerald-400">{filteredGroupedSpells.length}</strong> habilidades de <strong className="text-gray-200">{selectedSpellClass === 'all' ? 'todas las clases' : selectedSpellClass}</strong>
+                  Mostrando <strong className="text-emerald-400">{filteredGroupedSpells.length}</strong> habilidades ({lang === 'es' ? '🇪🇸 Español' : '🇬🇧 English'})
                 </div>
               </div>
 
-              {/* Spells Grid with Icons and Descriptions */}
+              {/* Spells Grid with Integrated Descriptions */}
               <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pr-1">
                 {filteredGroupedSpells.slice(0, 300).map((spell, sIdx) => (
                   <SpellCard
                     key={`${spell.className}_${spell.name}_${sIdx}`}
                     spell={spell}
+                    lang={lang}
                     onAddSpell={handleAddSpell}
                     isRecentlyAdded={recentlyAddedSpell === spell.name || (recentlyAddedSpell?.startsWith(spell.name) ?? false)}
                   />
