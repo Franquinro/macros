@@ -1,13 +1,12 @@
 import fs from 'fs';
-import path from 'path';
 
 function cleanHtml(html) {
   if (!html) return '';
   return html
-    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<!--[\s\S]*?-->/g, '') // remove comments like <!--sp707661:0-->
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<[^>]+>/g, '') // strip all tags
     .replace(/&nbsp;/g, ' ')
     .replace(/&quot;/g, '"')
     .replace(/&lt;/g, '<')
@@ -45,28 +44,34 @@ function parseTooltipHtml(tooltipHtml) {
   const rangeMatch = tooltipHtml.match(/(\d+\s*yd range|Melee Range)/i);
   if (rangeMatch) info.range = rangeMatch[1].trim();
 
-  // Tables split: the second table in WoW/Ascension contains the true description & requirements
-  const tableMatches = tooltipHtml.match(/<table>[\s\S]*?<\/table>/gi);
-  if (tableMatches && tableMatches.length >= 2) {
-    info.descriptionEn = cleanHtml(tableMatches[tableMatches.length - 1]);
-  } else if (tableMatches && tableMatches.length === 1) {
-    info.descriptionEn = cleanHtml(tableMatches[0]);
+  // Split by tables:
+  // Usually: <table>[Header / Cost / CD / Cast]</table><table>[Description / Reqs]</table>
+  const tables = tooltipHtml.split(/<\/?table[^>]*>/gi).filter(t => t.trim().length > 0);
+  
+  if (tables.length >= 2) {
+    // The second (or subsequent) tables contain the description
+    const descTables = tables.slice(1).join('\n');
+    info.descriptionEn = cleanHtml(descTables);
+  } else if (tables.length === 1) {
+    // Single table spell
+    info.descriptionEn = cleanHtml(tables[0]);
   } else {
     info.descriptionEn = cleanHtml(tooltipHtml);
   }
 
-  // Remove trailing identifier comment artifacts
+  // Remove trailing comments or artifact ids
   info.descriptionEn = info.descriptionEn.replace(/\?[\d:]+$/, '').trim();
 
   return info;
 }
 
+// Better translator for WoW terms
 function translateWoWDescription(text) {
   if (!text) return '';
   let es = text;
 
   const dict = [
-    // Pushback & cast times
+    // Headhunting & pushback
     [/Reduces the cast time of (.*?) by (\d+)% and removes your spell pushback suffered from taking damage\./gi, 'Reduce el tiempo de lanzamiento de $1 un $2% y elimina el retroceso de hechizos al recibir daño.'],
     [/Reduces the cast time of (.*?) by (\d+)%/gi, 'Reduce el tiempo de lanzamiento de $1 un $2%'],
     [/removes your spell pushback suffered from taking damage\./gi, 'elimina el retroceso de hechizos al recibir daño.'],
@@ -138,110 +143,20 @@ function translateWoWDescription(text) {
   return es;
 }
 
-async function fetchTooltip(spellId) {
-  try {
-    const res = await fetch(`https://db.ascension.gg/?spell=${spellId}&power`);
-    if (!res.ok) return null;
+async function test() {
+  const ids = [500060, 500061, 501344, 500000];
+  for (const id of ids) {
+    const res = await fetch(`https://db.ascension.gg/?spell=${id}&power`);
     const text = await res.text();
     const jsonMatch = text.match(/\$WowheadPower\.registerSpell\(\d+,\s*\d+,\s*(\{[\s\S]*?\})\);/);
-    if (!jsonMatch) return null;
-    const data = JSON.parse(jsonMatch[1]);
-    const parsed = parseTooltipHtml(data.tooltip_enus || '');
-    return {
-      icon: data.icon || '',
-      cost: parsed.cost || '',
-      castTime: parsed.castTime || '',
-      cooldown: parsed.cooldown || '',
-      range: parsed.range || '',
-      descriptionEn: parsed.descriptionEn || '',
-      descriptionEs: translateWoWDescription(parsed.descriptionEn || '')
-    };
-  } catch (err) {
-    return null;
-  }
-}
-
-async function batchFetchTooltips(spells, concurrency = 15) {
-  const results = new Map();
-  console.log(`Fetching tooltips for ${spells.length} abilities with concurrency ${concurrency}...`);
-  
-  let index = 0;
-  async function worker() {
-    while (index < spells.length) {
-      const currIdx = index++;
-      const sp = spells[currIdx];
-      const tooltip = await fetchTooltip(sp.id);
-      if (tooltip) {
-        results.set(sp.id, tooltip);
-        // Also map by name if has description
-        if (tooltip.descriptionEn) {
-          results.set(sp.name, tooltip);
-        }
-      }
-      if (currIdx % 100 === 0 || currIdx === spells.length - 1) {
-        console.log(`Progress: ${currIdx + 1}/${spells.length} (${Math.round((currIdx + 1) / spells.length * 100)}%)`);
-      }
+    if (jsonMatch) {
+      const data = JSON.parse(jsonMatch[1]);
+      const parsed = parseTooltipHtml(data.tooltip_enus || '');
+      console.log(`\n=== ID ${id}: ${data.name_enus} (${data.icon}) ===`);
+      console.log('Parsed EN:', parsed.descriptionEn);
+      console.log('Parsed ES:', translateWoWDescription(parsed.descriptionEn));
     }
   }
-
-  const workers = Array.from({ length: concurrency }, () => worker());
-  await Promise.all(workers);
-  return results;
 }
 
-async function main() {
-  const dataRaw = fs.readFileSync('src/data/coaSpellsData.json', 'utf-8');
-  const coaData = JSON.parse(dataRaw);
-
-  // Collect all unique spell IDs
-  const allSpellsList = [];
-  const seenIds = new Set();
-  for (const [clsName, spells] of Object.entries(coaData.spellsByClass)) {
-    for (const sp of spells) {
-      if (!seenIds.has(sp.id)) {
-        seenIds.add(sp.id);
-        allSpellsList.push({
-          id: sp.id,
-          name: sp.name,
-          className: clsName,
-          icon: sp.icon
-        });
-      }
-    }
-  }
-
-  console.log(`Found ${allSpellsList.length} unique spell IDs across all 21 classes.`);
-
-  const tooltipsMap = await batchFetchTooltips(allSpellsList, 20);
-  console.log(`Successfully fetched ${tooltipsMap.size} tooltips!`);
-
-  // Enrich data
-  const enrichedSpellsByClass = {};
-  for (const [clsName, spells] of Object.entries(coaData.spellsByClass)) {
-    enrichedSpellsByClass[clsName] = spells.map(sp => {
-      const tt = tooltipsMap.get(sp.id) || tooltipsMap.get(sp.name);
-      return {
-        ...sp,
-        icon: (tt && tt.icon) || sp.icon || 'inv_misc_questionmark',
-        cost: (tt && tt.cost) || '',
-        castTime: (tt && tt.castTime) || '',
-        cooldown: (tt && tt.cooldown) || '',
-        range: (tt && tt.range) || '',
-        descriptionEn: (tt && tt.descriptionEn) || '',
-        descriptionEs: (tt && tt.descriptionEs) || ''
-      };
-    });
-  }
-
-  const outputEnriched = {
-    ...coaData,
-    enrichedAt: new Date().toISOString(),
-    tooltipsCount: tooltipsMap.size,
-    spellsByClass: enrichedSpellsByClass
-  };
-
-  fs.writeFileSync('src/data/coaSpellsData.json', JSON.stringify(outputEnriched, null, 2), 'utf-8');
-  console.log('Saved fully enriched coaSpellsData.json!');
-}
-
-main().catch(console.error);
+test().catch(console.error);
