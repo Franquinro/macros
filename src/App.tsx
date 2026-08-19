@@ -425,6 +425,21 @@ export const App: React.FC = () => {
             setCurrentMacro(m);
             addToast('success', `Macro de CoA "${m.name}" cargada.`);
           }}
+          onAddSpellBlock={(spellName) => {
+            const newBlock: MacroBlock = {
+              id: `b_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              command: '/cast',
+              brackets: [],
+              argument: spellName,
+              enabled: true
+            };
+            setCurrentMacro({
+              ...currentMacro,
+              blocks: [...currentMacro.blocks, newBlock],
+              updatedAt: Date.now()
+            });
+            addToast('success', `Hechizo "${spellName}" añadido como bloque /cast.`);
+          }}
         />
       )}
 

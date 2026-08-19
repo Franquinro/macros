@@ -1,11 +1,12 @@
 import React from 'react';
+import { isCoaSpell } from '../../data/coaSpells';
 
 interface MacroCodeHighlighterProps {
   code: string;
 }
 
 /**
- * Rich syntax highlighter component for WoW 3.3.5a macro code
+ * Rich syntax highlighter component for WoW 3.3.5a macro code with Ascension CoA spell detection
  */
 export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code }) => {
   if (!code) {
@@ -17,6 +18,65 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
   }
 
   const lines = code.split('\n');
+
+  const highlightSpellText = (text: string, keyPrefix: string): React.ReactNode => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return <span key={keyPrefix} className="text-gray-100 font-medium">{text}</span>;
+    }
+
+    // Check if whole text is a CoA spell
+    if (isCoaSpell(trimmed)) {
+      return (
+        <span key={keyPrefix} className="text-amber-200 font-bold inline-flex items-center gap-1">
+          <span>{trimmed}</span>
+          <span
+            className="text-[9px] px-1 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 font-sans font-bold select-none cursor-help"
+            title="Habilidad reconocida de Project Ascension (Conquest of Azeroth)"
+          >
+            CoA
+          </span>
+        </span>
+      );
+    }
+
+    // If it's a list (e.g. in castsequence), check each element
+    if (trimmed.includes(',')) {
+      const subparts = text.split(',');
+      return (
+        <React.Fragment key={keyPrefix}>
+          {subparts.map((sub, sIdx) => {
+            const cleanSub = sub.trim();
+            const isCoa = isCoaSpell(cleanSub);
+            return (
+              <React.Fragment key={`${keyPrefix}_${sIdx}`}>
+                {isCoa ? (
+                  <span className="text-amber-200 font-bold inline-flex items-center gap-1">
+                    <span>{cleanSub}</span>
+                    <span
+                      className="text-[9px] px-1 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 font-sans font-bold select-none cursor-help"
+                      title="Habilidad de Project Ascension (Conquest of Azeroth)"
+                    >
+                      CoA
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-gray-100 font-medium">{cleanSub}</span>
+                )}
+                {sIdx < subparts.length - 1 && <span className="text-gray-500 mr-1">,</span>}
+              </React.Fragment>
+            );
+          })}
+        </React.Fragment>
+      );
+    }
+
+    return (
+      <span key={keyPrefix} className="text-gray-100 font-medium">
+        {text}
+      </span>
+    );
+  };
 
   const highlightBracketContent = (content: string) => {
     const parts = content.split(',');
@@ -75,10 +135,15 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
     if (trimmed.startsWith('#showtooltip') || trimmed.startsWith('#show')) {
       const match = line.match(/^(#showtooltip|#show)(\s+.*)?$/);
       if (match) {
+        const spellPart = match[2] ? match[2].trim() : '';
         return (
           <span key={lineIndex} className="block font-mono leading-relaxed">
             <span className="text-amber-400 font-bold">{match[1]}</span>
-            {match[2] && <span className="text-gray-200">{match[2]}</span>}
+            {spellPart && (
+              <span className="ml-1.5">
+                {highlightSpellText(spellPart, `st_${lineIndex}`)}
+              </span>
+            )}
           </span>
         );
       }
@@ -98,7 +163,6 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
     }
 
     // 4. Standard Commands with Brackets and Arguments
-    // Format: /command [bracket1][bracket2] argument
     const commandMatch = line.match(/^(\/[a-zA-Z0-9]+)(.*)$/);
     if (!commandMatch) {
       return (
@@ -173,20 +237,12 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
                   </span>
                 );
               }
-              return (
-                <span key={pIdx} className="text-gray-100 font-medium">
-                  {p}
-                </span>
-              );
+              return highlightSpellText(p, `sp_${currentPos}_${pIdx}`);
             })}
           </React.Fragment>
         );
       } else {
-        tokens.push(
-          <span key={`rem_${currentPos}`} className="text-gray-100 font-medium">
-            {remainingText}
-          </span>
-        );
+        tokens.push(highlightSpellText(remainingText, `rem_${currentPos}`));
       }
     }
 

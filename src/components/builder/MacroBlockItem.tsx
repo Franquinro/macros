@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { MacroBlock, ConditionBracket } from '../../types/macro';
+import React, { useState, useRef, useEffect } from 'react';
+import { MacroBlock } from '../../types/macro';
 import { formatBracket } from '../../utils/macroGenerator';
 import { validateBracket } from '../../utils/conditionValidator';
+import { searchCoaSpells } from '../../data/coaSpells';
 import { 
-  GripVertical, 
   ChevronUp, 
   ChevronDown, 
   SlidersHorizontal, 
@@ -12,10 +12,9 @@ import {
   Eye, 
   EyeOff, 
   MessageSquare, 
-  Plus, 
-  HelpCircle,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 
 interface MacroBlockItemProps {
@@ -44,12 +43,33 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
   onOpenCastSequence
 }) => {
   const [showComment, setShowComment] = useState(!!block.comment);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ name: string; className?: string; icon?: string; rank?: string }[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showSuggestions && block.argument && block.argument.trim().length >= 2) {
+      const results = searchCoaSpells(block.argument, 8);
+      setSuggestions(results);
+    } else {
+      setSuggestions([]);
+    }
+  }, [block.argument, showSuggestions]);
 
   const handleArgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateBlock({
       ...block,
       argument: e.target.value
     });
+    setShowSuggestions(true);
+  };
+
+  const handleSelectSpell = (spellName: string) => {
+    onUpdateBlock({
+      ...block,
+      argument: spellName
+    });
+    setShowSuggestions(false);
   };
 
   const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,18 +227,62 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
             </button>
           )}
 
-          {/* Argument Input (Spell Name, item, slot, text) */}
-          <input
-            type="text"
-            value={block.argument}
-            onChange={handleArgChange}
-            placeholder={
-              block.command === '/castsequence'
-                ? 'reset=combat/target/6 Spell1, Spell2'
-                : 'Nombre de habilidad, ítem o ranura (ej. Flash of Light, 13, etc.)'
-            }
-            className="flex-1 min-w-[180px] bg-[#0c1017] border border-[#263345] focus:border-amber-500/60 rounded-lg px-2.5 py-1 text-xs text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500/30 font-mono transition"
-          />
+          {/* Argument Input with CoA Spell Autocomplete */}
+          <div className="relative flex-1 min-w-[180px]" ref={dropdownRef}>
+            <input
+              type="text"
+              value={block.argument}
+              onChange={handleArgChange}
+              onFocus={() => setShowSuggestions(true)}
+              placeholder={
+                block.command === '/castsequence'
+                  ? 'reset=combat/target/6 Spell1, Spell2'
+                  : 'Nombre de habilidad, ítem o ranura (ej. Pyroblast, Surging Tonic, 13)'
+              }
+              className="w-full bg-[#0c1017] border border-[#263345] focus:border-amber-500/60 rounded-lg px-2.5 py-1 text-xs text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500/30 font-mono transition"
+            />
+
+            {/* CoA Autocomplete Suggestions Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-40 bg-[#0d131c] border border-amber-500/40 rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto">
+                <div className="px-2.5 py-1 bg-[#141b26] border-b border-[#232f40] flex items-center justify-between text-[10px] text-amber-400 font-bold uppercase tracking-wider">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-400" /> Habilidades CoA ({suggestions.length})
+                  </span>
+                  <span className="text-gray-400 font-normal">Clic para autocompletar</span>
+                </div>
+                <div className="p-1 space-y-0.5">
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSpell(s.name);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-amber-500/20 hover:text-amber-200 text-gray-200 text-xs flex items-center justify-between transition group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium font-mono group-hover:text-amber-300">
+                          {s.name}
+                        </span>
+                        {s.rank && (
+                          <span className="text-[10px] text-gray-500 font-sans">
+                            ({s.rank})
+                          </span>
+                        )}
+                      </div>
+                      {s.className && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-semibold uppercase">
+                          {s.className}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right: Actions (Disable, Comment, Duplicate, Delete) */}
