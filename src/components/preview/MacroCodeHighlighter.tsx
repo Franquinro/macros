@@ -20,7 +20,13 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
   const lines = code.split('\n');
 
   const highlightSpellText = (text: string, keyPrefix: string): React.ReactNode => {
+    // Preserve leading and trailing whitespace
+    const leadingSpaceMatch = text.match(/^(\s+)/);
+    const trailingSpaceMatch = text.match(/(\s+)$/);
+    const leadingSpace = leadingSpaceMatch ? leadingSpaceMatch[1] : '';
+    const trailingSpace = trailingSpaceMatch ? trailingSpaceMatch[1] : '';
     const trimmed = text.trim();
+
     if (!trimmed) {
       return <span key={keyPrefix} className="text-gray-100 font-medium">{text}</span>;
     }
@@ -28,33 +34,43 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
     // Check if whole text is a CoA spell
     if (isCoaSpell(trimmed)) {
       return (
-        <span key={keyPrefix} className="text-amber-200 font-bold inline-flex items-center gap-1">
-          <span>{trimmed}</span>
-          <span
-            className="text-[9px] px-1 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 font-sans font-bold select-none cursor-help"
-            title="Habilidad reconocida de Project Ascension (Conquest of Azeroth)"
-          >
-            CoA
+        <React.Fragment key={keyPrefix}>
+          {leadingSpace && <span>{leadingSpace}</span>}
+          <span className="text-amber-200 font-bold inline-flex items-center gap-1">
+            <span>{trimmed}</span>
+            <span
+              className="text-[9px] px-1 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 font-sans font-bold select-none cursor-help ml-1"
+              title="Habilidad reconocida de Project Ascension (Conquest of Azeroth)"
+            >
+              CoA
+            </span>
           </span>
-        </span>
+          {trailingSpace && <span>{trailingSpace}</span>}
+        </React.Fragment>
       );
     }
 
-    // If it's a list (e.g. in castsequence), check each element
+    // If it's a comma-separated list (e.g. in castsequence), check each element
     if (trimmed.includes(',')) {
       const subparts = text.split(',');
       return (
         <React.Fragment key={keyPrefix}>
           {subparts.map((sub, sIdx) => {
+            const subLeadMatch = sub.match(/^(\s+)/);
+            const subTrailMatch = sub.match(/(\s+)$/);
+            const subLead = subLeadMatch ? subLeadMatch[1] : '';
+            const subTrail = subTrailMatch ? subTrailMatch[1] : '';
             const cleanSub = sub.trim();
             const isCoa = isCoaSpell(cleanSub);
+
             return (
               <React.Fragment key={`${keyPrefix}_${sIdx}`}>
+                {subLead && <span>{subLead}</span>}
                 {isCoa ? (
                   <span className="text-amber-200 font-bold inline-flex items-center gap-1">
                     <span>{cleanSub}</span>
                     <span
-                      className="text-[9px] px-1 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 font-sans font-bold select-none cursor-help"
+                      className="text-[9px] px-1 py-0.2 rounded bg-amber-500/25 text-amber-300 border border-amber-500/50 font-sans font-bold select-none cursor-help ml-1"
                       title="Habilidad de Project Ascension (Conquest of Azeroth)"
                     >
                       CoA
@@ -63,7 +79,8 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
                 ) : (
                   <span className="text-gray-100 font-medium">{cleanSub}</span>
                 )}
-                {sIdx < subparts.length - 1 && <span className="text-gray-500 mr-1">,</span>}
+                {subTrail && <span>{subTrail}</span>}
+                {sIdx < subparts.length - 1 && <span className="text-gray-500">,</span>}
               </React.Fragment>
             );
           })}
@@ -135,15 +152,11 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
     if (trimmed.startsWith('#showtooltip') || trimmed.startsWith('#show')) {
       const match = line.match(/^(#showtooltip|#show)(\s+.*)?$/);
       if (match) {
-        const spellPart = match[2] ? match[2].trim() : '';
+        const spellPart = match[2] || '';
         return (
           <span key={lineIndex} className="block font-mono leading-relaxed">
             <span className="text-amber-400 font-bold">{match[1]}</span>
-            {spellPart && (
-              <span className="ml-1.5">
-                {highlightSpellText(spellPart, `st_${lineIndex}`)}
-              </span>
-            )}
+            {spellPart && highlightSpellText(spellPart, `st_${lineIndex}`)}
           </span>
         );
       }
@@ -197,7 +210,7 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
       const textBefore = rest.slice(currentPos, match.index);
       if (textBefore) {
         tokens.push(
-          <span key={`txt_${currentPos}`} className="text-gray-300">
+          <span key={`txt_${currentPos}`} className="text-gray-300 whitespace-pre">
             {textBefore}
           </span>
         );
@@ -221,7 +234,7 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
       // Highlight arguments (Slot IDs 13/14/10 or reset=...)
       if (/^\s*(13|14|10|6|15|1|16|17|18)\b/.test(remainingText)) {
         tokens.push(
-          <span key={`slot_${currentPos}`} className="text-amber-300 font-bold">
+          <span key={`slot_${currentPos}`} className="text-amber-300 font-bold whitespace-pre">
             {remainingText}
           </span>
         );
@@ -247,7 +260,7 @@ export const MacroCodeHighlighter: React.FC<MacroCodeHighlighterProps> = ({ code
     }
 
     return (
-      <span key={lineIndex} className="block font-mono leading-relaxed">
+      <span key={lineIndex} className="block font-mono leading-relaxed whitespace-pre">
         <span className={cmdColor}>{command}</span>
         {tokens}
       </span>
