@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { COA_ARCHETYPES, CoAArchetype } from '../../data/coaArchetypes';
-import { COA_CLASSES_LIST, COA_SPELLS_BY_CLASS, CoaSpellItem } from '../../data/coaSpells';
+import { COA_CLASSES_LIST, getGroupedCoaSpells, CoaGroupedSpell } from '../../data/coaSpells';
 import { parseMacroText } from '../../utils/macroParser';
 import { MacroData } from '../../types/macro';
 import { 
@@ -13,7 +13,6 @@ import {
   ExternalLink,
   BookOpen,
   Plus,
-  Layers,
   Check
 } from 'lucide-react';
 
@@ -23,6 +22,94 @@ interface CoaHubModalProps {
   onLoadCoaMacro: (macro: MacroData) => void;
   onAddSpellBlock?: (spellName: string) => void;
 }
+
+interface SpellCardProps {
+  spell: CoaGroupedSpell;
+  onAddSpell: (spellText: string) => void;
+  isRecentlyAdded: boolean;
+}
+
+const SpellCard: React.FC<SpellCardProps> = ({ spell, onAddSpell, isRecentlyAdded }) => {
+  // Default is empty string => Max rank (no suffix) in WoW macros
+  const [selectedRank, setSelectedRank] = useState<string>('');
+
+  const handleAdd = () => {
+    const spellText = selectedRank ? `${spell.name}(${selectedRank})` : spell.name;
+    onAddSpell(spellText);
+  };
+
+  return (
+    <div className="p-3 rounded-xl bg-[#151c27] border border-[#222f40] hover:border-emerald-500/40 transition flex flex-col justify-between group shadow-sm">
+      <div>
+        <div className="flex items-start justify-between gap-1.5 mb-1">
+          <div className="text-xs font-bold text-gray-200 group-hover:text-emerald-300 transition truncate flex-1">
+            {spell.name}
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-semibold uppercase shrink-0">
+            {spell.className}
+          </span>
+        </div>
+
+        {spell.ranks && spell.ranks.length > 0 ? (
+          <div className="text-[10px] text-gray-400 mb-2.5">
+            <span className="text-gray-500">Rangos disponibles: </span>
+            <span className="font-mono text-gray-300">{spell.ranks.length}</span>
+            <span className="text-gray-500"> (hasta {spell.ranks[spell.ranks.length - 1]})</span>
+          </div>
+        ) : (
+          <div className="text-[10px] text-gray-500 italic mb-2.5">
+            Habilidad única / Pasiva
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 pt-2 border-t border-[#1c2738]">
+        {spell.ranks && spell.ranks.length > 0 ? (
+          <select
+            value={selectedRank}
+            onChange={(e) => setSelectedRank(e.target.value)}
+            className="flex-1 bg-[#0d121a] border border-[#273445] rounded-lg px-2 py-1 text-[11px] text-amber-200 focus:outline-none focus:border-emerald-500 font-mono transition"
+            title="Seleccionar rango específico (por defecto se usa el rango máximo)"
+          >
+            <option value="">Rango Máximo (Default)</option>
+            {spell.ranks.map((r, rIdx) => (
+              <option key={rIdx} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="flex-1 text-[11px] text-gray-500 font-mono">
+            Rango único
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleAdd}
+          className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition flex items-center space-x-1 shrink-0 ${
+            isRecentlyAdded
+              ? 'bg-emerald-500 text-black border-emerald-400 shadow-glow-fel'
+              : 'bg-[#1a2535] text-gray-200 border-[#2f3f54] hover:bg-emerald-500 hover:text-black hover:border-emerald-400'
+          }`}
+          title="Añadir a la macro (/cast)"
+        >
+          {isRecentlyAdded ? (
+            <>
+              <Check className="w-3.5 h-3.5" />
+              <span>Añadido</span>
+            </>
+          ) : (
+            <>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Añadir</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const CoaHubModal: React.FC<CoaHubModalProps> = ({
   isOpen,
@@ -49,23 +136,12 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
     a.signatureSpells.some(s => s.toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Filter spellbook
-  let allSpells: CoaSpellItem[] = [];
-  if (selectedSpellClass === 'all') {
-    for (const [clsName, spells] of Object.entries(COA_SPELLS_BY_CLASS)) {
-      for (const sp of spells) {
-        allSpells.push({ ...sp, className: clsName });
-      }
-    }
-  } else {
-    const classSpells = COA_SPELLS_BY_CLASS[selectedSpellClass] || [];
-    allSpells = classSpells.map(s => ({ ...s, className: selectedSpellClass }));
-  }
-
-  const filteredSpells = allSpells.filter(s => {
+  // Grouped unique spells
+  const groupedSpells = getGroupedCoaSpells(selectedSpellClass);
+  const filteredGroupedSpells = groupedSpells.filter(s => {
     if (!spellSearch) return true;
     const q = spellSearch.toLowerCase();
-    return s.name.toLowerCase().includes(q) || (s.rank && s.rank.toLowerCase().includes(q));
+    return s.name.toLowerCase().includes(q) || s.ranks.some(r => r.toLowerCase().includes(q));
   });
 
   const handleApplyMacro = (rec: { title: string; description: string; macroCode: string }) => {
@@ -85,10 +161,10 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
     onClose();
   };
 
-  const handleAddSpell = (spellName: string) => {
+  const handleAddSpell = (spellText: string) => {
     if (onAddSpellBlock) {
-      onAddSpellBlock(spellName);
-      setRecentlyAddedSpell(spellName);
+      onAddSpellBlock(spellText);
+      setRecentlyAddedSpell(spellText);
       setTimeout(() => setRecentlyAddedSpell(null), 2000);
     }
   };
@@ -113,7 +189,7 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-gray-400">
-                Base de datos completa con 2.915 hechizos extraídos de Ascension DB y macros recomendadas.
+                Base de datos completa de hechizos con selector de rango y macros optimizadas para CoA.
               </p>
             </div>
           </div>
@@ -149,7 +225,7 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Grimorio de Hechizos (2.915 Hechizos)</span>
+              <span>Grimorio de Hechizos ({groupedSpells.length} Habilidades)</span>
             </button>
           </div>
 
@@ -324,12 +400,13 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
                 >
                   <span>Todas las Clases</span>
                   <span className="text-[10px] bg-[#1a2332] px-1.5 py-0.5 rounded text-gray-400 font-mono">
-                    2.915
+                    {getGroupedCoaSpells('all').length}
                   </span>
                 </button>
 
                 {COA_CLASSES_LIST.map((cls) => {
                   const isSel = selectedSpellClass === cls.className;
+                  const count = getGroupedCoaSpells(cls.className).length;
                   return (
                     <button
                       key={cls.classNum}
@@ -348,7 +425,7 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
                         <span className="truncate">{cls.className}</span>
                       </div>
                       <span className="text-[10px] bg-[#1a2332] px-1.5 py-0.5 rounded text-gray-400 font-mono shrink-0 ml-1">
-                        {cls.spellCount}
+                        {count}
                       </span>
                     </button>
                   );
@@ -367,63 +444,31 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
                     type="text"
                     value={spellSearch}
                     onChange={(e) => setSpellSearch(e.target.value)}
-                    placeholder="Buscar hechizo en el grimorio..."
+                    placeholder="Buscar habilidad (ej. Pyroblast, Bomb, Strike...)"
                     className="w-full pl-9 pr-3 py-1.5 bg-[#141c27] border border-[#273445] rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 <div className="text-xs text-gray-400">
-                  Mostrando <strong className="text-emerald-400">{filteredSpells.length}</strong> hechizos de <strong className="text-gray-200">{selectedSpellClass === 'all' ? 'todas las clases' : selectedSpellClass}</strong>
+                  Mostrando <strong className="text-emerald-400">{filteredGroupedSpells.length}</strong> habilidades únicas (por defecto rango máx)
                 </div>
               </div>
 
               {/* Spells Grid */}
               <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pr-1">
-                {filteredSpells.slice(0, 300).map((spell, sIdx) => {
-                  const isRecentlyAdded = recentlyAddedSpell === spell.name;
-                  return (
-                    <div
-                      key={sIdx}
-                      className="p-2.5 rounded-xl bg-[#151c27] border border-[#222f40] hover:border-emerald-500/40 transition flex items-center justify-between group shadow-sm"
-                    >
-                      <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs font-bold text-gray-200 group-hover:text-emerald-300 transition truncate">
-                          {spell.name}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-400">
-                          {spell.className && (
-                            <span className="text-amber-400 font-semibold uppercase">
-                              {spell.className}
-                            </span>
-                          )}
-                          {spell.rank && (
-                            <span className="text-gray-500 truncate">
-                              • {spell.rank}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleAddSpell(spell.name)}
-                        className={`p-1.5 rounded-lg border text-xs font-bold transition shrink-0 ${
-                          isRecentlyAdded
-                            ? 'bg-emerald-500 text-black border-emerald-400 shadow-glow-fel'
-                            : 'bg-[#1a2535] text-gray-300 border-[#2f3f54] hover:bg-emerald-500 hover:text-black hover:border-emerald-400'
-                        }`}
-                        title="Añadir /cast con este hechizo a la macro"
-                      >
-                        {isRecentlyAdded ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  );
-                })}
+                {filteredGroupedSpells.slice(0, 300).map((spell, sIdx) => (
+                  <SpellCard
+                    key={`${spell.className}_${spell.name}_${sIdx}`}
+                    spell={spell}
+                    onAddSpell={handleAddSpell}
+                    isRecentlyAdded={recentlyAddedSpell === spell.name || (recentlyAddedSpell?.startsWith(spell.name) ?? false)}
+                  />
+                ))}
               </div>
 
-              {filteredSpells.length > 300 && (
+              {filteredGroupedSpells.length > 300 && (
                 <div className="p-2 bg-[#0d121a] rounded-lg text-center text-xs text-gray-400 border border-[#202936]">
-                  Mostrando los primeros 300 resultados de {filteredSpells.length}. Escribe en el buscador para filtrar más específicamente.
+                  Mostrando las primeras 300 habilidades de {filteredGroupedSpells.length}. Escribe en el buscador para filtrar más específicamente.
                 </div>
               )}
 

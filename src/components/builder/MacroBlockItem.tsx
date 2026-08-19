@@ -44,7 +44,7 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
 }) => {
   const [showComment, setShowComment] = useState(!!block.comment);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<{ name: string; className?: string; icon?: string; rank?: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<{ name: string; className?: string; icon?: string; ranks: string[] }[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -266,9 +266,9 @@ export const MacroBlockItem: React.FC<MacroBlockItemProps> = ({
                         <span className="font-medium font-mono group-hover:text-amber-300">
                           {s.name}
                         </span>
-                        {s.rank && (
+                        {s.ranks && s.ranks.length > 0 && (
                           <span className="text-[10px] text-gray-500 font-sans">
-                            ({s.rank})
+                            ({s.ranks.length} {s.ranks.length === 1 ? 'rango' : 'rangos'})
                           </span>
                         )}
                       </div>

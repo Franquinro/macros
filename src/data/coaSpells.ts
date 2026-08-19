@@ -19,6 +19,15 @@ export interface CoaClassSpellGroup {
   spellCount: number;
 }
 
+export interface CoaGroupedSpell {
+  name: string;
+  className: string;
+  classNum?: number;
+  icon?: string;
+  ranks: string[];
+  maxLevel: number;
+}
+
 export const COA_CLASSES_LIST: CoaClassSpellGroup[] = coaData.classes;
 
 export const COA_UNIQUE_SPELL_NAMES: string[] = coaData.uniqueSpellNames;
@@ -29,37 +38,84 @@ export const COA_SPELLS_BY_CLASS: Record<string, CoaSpellItem[]> = coaData.spell
 const COA_SPELL_SET = new Set(COA_UNIQUE_SPELL_NAMES.map(s => s.toLowerCase()));
 
 /**
- * Check if a spell name is a recognized Ascension CoA spell
+ * Check if a spell name is a recognized Ascension CoA spell (handles base name or name with (Rank X))
  */
 export function isCoaSpell(spellName: string): boolean {
   if (!spellName) return false;
-  return COA_SPELL_SET.has(spellName.trim().toLowerCase());
+  const clean = spellName.replace(/\s*\(Rank\s*\d+\)/i, '').trim().toLowerCase();
+  return COA_SPELL_SET.has(clean);
+}
+
+/**
+ * Get grouped spells (unique by base name, with list of ranks)
+ */
+export function getGroupedCoaSpells(classNameFilter?: string): CoaGroupedSpell[] {
+  const map = new Map<string, CoaGroupedSpell>();
+
+  const processSpells = (spells: CoaSpellItem[], clsName: string) => {
+    for (const sp of spells) {
+      const key = `${clsName}:::${sp.name}`;
+      let item = map.get(key);
+      if (!item) {
+        item = {
+          name: sp.name,
+          className: clsName,
+          classNum: sp.classNum,
+          icon: sp.icon,
+          ranks: [],
+          maxLevel: sp.level || 0
+        };
+        map.set(key, item);
+      }
+
+      if (sp.rank && sp.rank.trim() && !item.ranks.includes(sp.rank.trim())) {
+        item.ranks.push(sp.rank.trim());
+      }
+      if ((sp.level || 0) > item.maxLevel) {
+        item.maxLevel = sp.level || 0;
+      }
+    }
+  };
+
+  if (!classNameFilter || classNameFilter === 'all') {
+    for (const [clsName, spells] of Object.entries(COA_SPELLS_BY_CLASS)) {
+      processSpells(spells, clsName);
+    }
+  } else {
+    const classSpells = COA_SPELLS_BY_CLASS[classNameFilter] || [];
+    processSpells(classSpells, classNameFilter);
+  }
+
+  // Sort ranks naturally (Rank 1, Rank 2, Rank 10)
+  for (const item of map.values()) {
+    item.ranks.sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+      return numA - numB;
+    });
+  }
+
+  return Array.from(map.values());
 }
 
 /**
  * Search CoA spells by query for autocomplete suggestions
  */
-export function searchCoaSpells(query: string, limit = 10): { name: string; className?: string; icon?: string; rank?: string }[] {
+export function searchCoaSpells(query: string, limit = 10): { name: string; className?: string; icon?: string; ranks: string[] }[] {
   if (!query || query.trim().length < 1) return [];
   const q = query.trim().toLowerCase();
-  const results: { name: string; className?: string; icon?: string; rank?: string }[] = [];
-  const seen = new Set<string>();
+  const allGrouped = getGroupedCoaSpells('all');
+  const results: { name: string; className?: string; icon?: string; ranks: string[] }[] = [];
 
-  for (const [className, spells] of Object.entries(COA_SPELLS_BY_CLASS)) {
-    for (const sp of spells) {
-      if (sp.name.toLowerCase().includes(q)) {
-        const key = sp.name.toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          results.push({
-            name: sp.name,
-            className,
-            icon: sp.icon,
-            rank: sp.rank
-          });
-          if (results.length >= limit) return results;
-        }
-      }
+  for (const sp of allGrouped) {
+    if (sp.name.toLowerCase().includes(q)) {
+      results.push({
+        name: sp.name,
+        className: sp.className,
+        icon: sp.icon,
+        ranks: sp.ranks
+      });
+      if (results.length >= limit) break;
     }
   }
 
