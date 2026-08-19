@@ -104,7 +104,7 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, lang, onAddSpell, isRecent
         {/* Direct Spell Description in Card (No tooltips) */}
         <div className="p-2.5 rounded-lg bg-[#0c121a] border border-[#1c2738] min-h-[58px] flex items-center">
           {activeDescription ? (
-            <p className="text-[11px] text-gray-200 leading-relaxed">
+            <p className="text-[11px] text-gray-200 leading-relaxed whitespace-pre-line">
               {activeDescription}
             </p>
           ) : (
