@@ -13,9 +13,7 @@ import {
   ExternalLink, 
   BookOpen, 
   Plus, 
-  Check, 
-  Globe,
-  Clock
+  Check
 } from 'lucide-react';
 
 interface CoaHubModalProps {
@@ -68,8 +66,8 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, lang, onAddSpell, isRecent
 
           {/* Name & Badges */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-1">
-              <h4 className="text-xs font-bold text-gray-100 group-hover:text-emerald-300 transition truncate font-display">
+            <div className="flex items-start justify-between gap-1.5">
+              <h4 className="text-xs font-bold text-gray-100 group-hover:text-emerald-300 transition font-display leading-tight">
                 {spell.name}
               </h4>
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold uppercase shrink-0">
@@ -118,21 +116,23 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, lang, onAddSpell, isRecent
       </div>
 
       {/* Bottom Controls: Rank Selector + Add Button */}
-      <div className="flex items-center gap-2 pt-2.5 mt-2.5 border-t border-[#1e2b3c]">
+      <div className="flex items-center justify-between gap-2 pt-2.5 mt-2.5 border-t border-[#1e2b3c]">
         {spell.ranks && spell.ranks.length > 0 ? (
-          <select
-            value={selectedRank}
-            onChange={(e) => setSelectedRank(e.target.value)}
-            className="flex-1 bg-[#090d14] border border-[#273548] hover:border-emerald-500/50 rounded-lg px-2 py-1.5 text-[11px] text-amber-200 focus:outline-none focus:border-emerald-500 font-mono transition truncate"
-            title="Seleccionar rango específico (por defecto se usa el rango máximo)"
-          >
-            <option value="">Rango Máx (Por defecto)</option>
-            {spell.ranks.map((r, rIdx) => (
-              <option key={rIdx} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+          <div className="flex-1 min-w-0">
+            <select
+              value={selectedRank}
+              onChange={(e) => setSelectedRank(e.target.value)}
+              className="w-full bg-[#090d14] border border-[#273548] hover:border-emerald-500/50 rounded-lg px-2 py-1.5 text-[11px] text-amber-200 focus:outline-none focus:border-emerald-500 font-mono transition truncate"
+              title="Seleccionar rango específico (por defecto se usa el rango máximo)"
+            >
+              <option value="">Rango Máx (Auto)</option>
+              {spell.ranks.map((r, rIdx) => (
+                <option key={rIdx} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
         ) : (
           <div className="flex-1 text-[11px] text-gray-500 font-mono pl-1">
             Rango único
@@ -142,10 +142,10 @@ const SpellCard: React.FC<SpellCardProps> = ({ spell, lang, onAddSpell, isRecent
         <button
           type="button"
           onClick={handleAdd}
-          className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition flex items-center space-x-1 shrink-0 ${
+          className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition flex items-center justify-center space-x-1.5 shrink-0 min-w-[84px] ${
             isRecentlyAdded
               ? 'bg-emerald-500 text-black border-emerald-400 shadow-glow-fel'
-              : 'bg-[#1b2738] text-gray-100 border-[#2f425b] hover:bg-emerald-500 hover:text-black hover:border-emerald-400'
+              : 'bg-[#1b2738] text-gray-100 border-[#2f425b] hover:bg-emerald-500 hover:text-black hover:border-emerald-400 shadow-sm'
           }`}
           title="Añadir a la macro activa (/cast)"
         >
@@ -232,7 +232,7 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
-      <div className="bg-[#121822] border border-[#2b394a] rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-[#121822] border border-[#2b394a] rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Header */}
         <div className="p-4 border-b border-[#232c37] bg-gradient-to-r from-[#141b25] via-[#1b2533] to-[#141b25] flex items-center justify-between">
@@ -410,8 +410,8 @@ export const CoaHubModal: React.FC<CoaHubModalProps> = ({
                 </div>
               </div>
 
-              {/* Spells Grid with Integrated Descriptions */}
-              <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pr-1">
+              {/* Spells Grid with Integrated Descriptions and Clean Alignment */}
+              <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 pr-1">
                 {filteredGroupedSpells.slice(0, 300).map((spell, sIdx) => (
                   <SpellCard
                     key={`${spell.className}_${spell.name}_${sIdx}`}
